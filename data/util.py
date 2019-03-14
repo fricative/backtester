@@ -83,7 +83,8 @@ def load_adjusted_price(fsym_id: str, start_date: datetime.date=None,
         dataframe['total_factor'] = np.cumprod(total_factor)
     
     dataframe[fsym_id] = dataframe['price'] * dataframe['total_factor']
-    return dataframe.loc[:, ['date', fsym_id]]
+    dataframe.set_index('date', inplace=True)
+    return dataframe.loc[:, [fsym_id]]
 
 
 def _load_daily_price(fsym_id: str, db_connection: pymysql.Connection,
