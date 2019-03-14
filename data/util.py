@@ -14,8 +14,8 @@ from data.config import FUNDAMENTAL_DATAFRAME_BUCKET, PRICE_DATABASE, \
 def get_data_folder():    
     DATA_FOLDER = {'price': path.join(path.join(path.expanduser('~'), 
                             'backtester_database'), 'price'),
-                   'fundamental': path.join(path.join(path.expanduser('~'), 
-                            'backtester_database'), 'fundamental')}
+                   }#'fundamental': path.join(path.join(path.expanduser('~'), 
+                     #       'backtester_database'), 'fundamental')}
     for db_name, data_dir in DATA_FOLDER.items():
         if not path.isdir(data_dir):
             makedirs(data_dir)            
@@ -58,7 +58,7 @@ def load_adjusted_price(fsym_id: str, start_date: datetime.date=None,
         start_date = end_date + time_range[period_unit](periods)
 
     connection = pymysql.connect(host=PRICE_DATABASE, user=PRICE_DATABASE_USERNAME, 
-                password=PRICE_DATABASE_PASSWORD, db=PRICE_SCHEMA)
+                        password=PRICE_DATABASE_PASSWORD, db=PRICE_SCHEMA)
     price_dataframe = _load_daily_price(fsym_id, connection, start_date, end_date)
     dividend_dataframe = _load_dividend(fsym_id, connection, start_date, end_date)
     split_dataframe = _load_split(fsym_id, connection, start_date, end_date)
@@ -73,12 +73,14 @@ def load_adjusted_price(fsym_id: str, start_date: datetime.date=None,
     if adjustment_method == 'b':
         dataframe['dividend'] = dataframe['dividend'].shift(-1)
         dataframe['split_factor'] = dataframe['split_factor'].shift(-1)
-        dataframe['cash_factor'] = (dataframe['price'] - dataframe['dividend']) / dataframe['price']
+        dataframe['cash_factor'] = dataframe['price'] - dataframe['dividend']
+        dataframe['cash_factor'] /= dataframe['price']
         total_factor = list(dataframe['cash_factor'] * dataframe['split_factor'])[::-1]
         total_factor[0] = 1
         dataframe['total_factor'] = np.cumprod(total_factor)[::-1]
     else:
-        dataframe['cash_factor'] = (dataframe['dividend'] + dataframe['price']) / dataframe['price']
+        dataframe['cash_factor'] = dataframe['dividend'] + dataframe['price']
+        dataframe['cash_factor'] /= dataframe['price']
         total_factor = list(dataframe['cash_factor'] / dataframe['split_factor'])
         dataframe['total_factor'] = np.cumprod(total_factor)
     
@@ -92,8 +94,9 @@ def _load_daily_price(fsym_id: str, db_connection: pymysql.Connection,
     """
     Function to retrieve unadjusted daily price
     """
-    base_sql = """ SELECT p_date AS date, p_price AS price FROM eod.fp_v2_fp_basic_prices 
-                WHERE fsym_id = '%s' AND p_date >= '%s' AND p_date <= '%s' """
+    base_sql = """ SELECT p_date AS date, p_price AS price FROM 
+                    eod.fp_v2_fp_basic_prices WHERE fsym_id = '%s' 
+                    AND p_date >= '%s' AND p_date <= '%s' """
     sql = base_sql % (fsym_id, start_date, end_date)
     dataframe = pd.read_sql(sql=sql, con=db_connection)
     return dataframe
@@ -105,8 +108,8 @@ def _load_dividend(fsym_id: str, db_connection: pymysql.Connection,
     Function to retrieve dividend
     """
     base_sql = """ SELECT p_divs_exdate AS dividend_exdate, p_divs_pd AS dividend 
-                FROM eod.fp_v2_fp_basic_dividends WHERE fsym_id = '%s' AND p_divs_exdate >= '%s' 
-                AND p_divs_exdate <= '%s' """
+                    FROM eod.fp_v2_fp_basic_dividends WHERE fsym_id = '%s' 
+                    AND p_divs_exdate >= '%s' AND p_divs_exdate <= '%s' """
     sql = base_sql % (fsym_id, start_date, end_date)
     dataframe = pd.read_sql(sql=sql, con=db_connection)
     return dataframe
@@ -117,9 +120,10 @@ def _load_split(fsym_id: str, db_connection: pymysql.Connection,
     """
     Function to retrieve stock split
     """
-    base_sql = """ SELECT p_split_date AS split_exdate, p_split_factor AS split_factor
-                FROM eod.fp_v2_fp_basic_splits WHERE fsym_id = '%s' AND p_split_date >= '%s' 
-                AND p_split_date <= '%s' """
+    base_sql = """ SELECT p_split_date AS split_exdate, 
+                    p_split_factor AS split_factor
+                    FROM eod.fp_v2_fp_basic_splits WHERE fsym_id = '%s' 
+                    AND p_split_date >= '%s' AND p_split_date <= '%s' """
     sql = base_sql % (fsym_id, start_date, end_date)
     dataframe = pd.read_sql(sql=sql, con=db_connection)
     return dataframe

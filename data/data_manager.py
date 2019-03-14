@@ -1,4 +1,5 @@
 from datetime import date
+from dateutil.parser import parse
 from hashlib import sha256
 from os.path import join, isfile
 from sys import stdout
@@ -28,15 +29,18 @@ class DataManager:
             dataframe = dataframe.join(df, how='outer')
         
         print()
+        dataframe = dataframe.round(decimals=2)
+        dataframe.index = pd.to_datetime(dataframe.index)
         dataframe.sort_index(inplace=True)
         dataframe.fillna(inplace=True, method='pad')
-        return dataframe.round(decimals=2)
+        return dataframe
 
 
     @staticmethod
     def create_fundamental_dataframe(start_date: date, end_date: date, \
                 universe: List[str]):
-        return pd.DataFrame()
+        dataframe = None
+        return dataframe
 
 
     @staticmethod
@@ -64,16 +68,21 @@ class DataManager:
             file_path = join(db_dir, self.file_key + '.csv')
             if not isfile(file_path):
                 process_function = DataManager.data_prep(db_type)
-                dataframe = process_function(start_date=start_date, end_date=end_date, universe=universe)
+                dataframe = process_function(start_date=start_date,
+                            end_date=end_date, universe=universe)
                 dataframe.to_csv(file_path)
                 self.DATAFRAMES[db_type] = dataframe
             else:
                 print('Found existing %s, using cached data' % db_type)
-                self.DATAFRAMES[db_type] = pd.read_csv(file_path)
+                self.DATAFRAMES[db_type] = pd.read_csv(file_path, index_col='date', 
+                                            parse_dates=['date'])
 
 
-    def as_of_date(self, current_date: date):
-        data = {}
-        for db_type, dataframe in self.DATAFRAMES.items():
-            data[db_type] = dataframe[dataframe['date'] < str(current_date)]
-        return data
+    def get_market_data(self, as_of_date: date):
+        return {db_type: dataframe[dataframe.index < as_of_date] 
+                for db_type, dataframe in self.DATAFRAMES.items()}
+
+    
+    def get_price_for_date(self, as_of_date: date):
+        price = self.DATAFRAMES['price']
+        return price[price.index <= as_of_date].iloc[-1, :].squeeze()

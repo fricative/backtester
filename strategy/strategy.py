@@ -1,14 +1,16 @@
+from typing import List
 from trade import Trade
 
 
 class Strategy:
 
-    def __init__(self, data_window_size: int=100, rebalance_freq: str=None):
+    def __init__(self, data_window_size: int=100, 
+                rebalance_freq: str=None, *args, **kwargs):
         self.data_window_size = data_window_size
         self.rebalance_freq = rebalance_freq
-        pass
 
-    def digest(self, data, current_date):
+
+    def digest(self, data, current_date) -> List[Trade]:
         trades = []
         price_dataframe = data['price']
         aapl = price_dataframe['MH33D6-R']
