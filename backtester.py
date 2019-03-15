@@ -7,20 +7,18 @@ from typing import List, NewType
 import pandas as pd
 
 from data.data_manager import DataManager
-from strategy.strategy import Strategy
+from strategies.strategy import Strategy
 from trade import Trade
 
-Strategy = NewType('Strategy', Strategy)
 Trade = NewType('Trade', Trade)
 
 
 class Backtester:
 
-    def __init__(self, strategy: Strategy, universe: List[str], start_date: date, 
+    def __init__(self, universe: List[str], start_date: date, 
             end_date: date=None, cash: float=1000000.0, *args, **kwargs):
         self.universe = sorted(universe)
         self.cash = cash
-        self.strategy = strategy
         self.start_date = start_date
         self.end_date = end_date or date.today()
         self.current_date = None
@@ -30,13 +28,14 @@ class Backtester:
         self.pnl = None
 
 
-    def initialize(self):
+    def initialize(self, strategy):
+        
         # make sure the number of dates earlier than backtest start 
         # date is enough to cover the strategy's required data window
-        date_buffer = self.strategy.data_window_size * int(7 / 5) + 20
+        date_buffer = strategy.data_window_size * int(7 / 5) + 20
         data_start_date = self.start_date - timedelta(days=date_buffer)
         self.data_manager.setup(start_date=data_start_date, 
-                end_date=self.end_date, universe=self.universe)
+            strategy=strategy, end_date=self.end_date, universe=self.universe)
         
         self.current_date = pd.Timestamp(self.start_date)
         self.position = defaultdict(int)
@@ -73,8 +72,8 @@ class Backtester:
         print(self.mtm)
 
 
-    def run(self):
-        self.initialize()
+    def run(self, strategy):
+        self.initialize(strategy)
         while self.current_date.date() <= self.end_date:
             
             if self.current_date.isoweekday() in (6, 7):
@@ -83,7 +82,7 @@ class Backtester:
                 continue
 
             data = self.data_manager.get_market_data(as_of_date=self.current_date)
-            trades = self.strategy.digest(data=data, current_date=self.current_date)
+            trades = strategy.digest(data=data, current_date=self.current_date)
             self.execute_trades(trades)
             self.post_trade()
 

@@ -14,8 +14,8 @@ from data.config import FUNDAMENTAL_DATAFRAME_BUCKET, PRICE_DATABASE, \
 def get_data_folder():    
     DATA_FOLDER = {'price': path.join(path.join(path.expanduser('~'), 
                             'backtester_database'), 'price'),
-                   }#'fundamental': path.join(path.join(path.expanduser('~'), 
-                     #       'backtester_database'), 'fundamental')}
+                   'fundamental': path.join(path.join(path.expanduser('~'), 
+                            'backtester_database'), 'fundamental')}
     for db_name, data_dir in DATA_FOLDER.items():
         if not path.isdir(data_dir):
             makedirs(data_dir)            
