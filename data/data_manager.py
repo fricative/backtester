@@ -16,7 +16,7 @@ class DataManager:
   
     @staticmethod
     def create_price_dataframe(start_date: date, end_date: date, \
-                universe: List[str], file_path:str, strategy):
+                universe: List[str], cache_path:str, strategy):
         dataframe = None
         for idx, ticker in enumerate(universe):
             df = load_adjusted_price(fsym_id=ticker, start_date=start_date,
@@ -35,14 +35,14 @@ class DataManager:
         dataframe.index = pd.to_datetime(dataframe.index)
         dataframe.sort_index(inplace=True)
         dataframe.fillna(inplace=True, method='pad')
-        dataframe.to_csv(file_path)
+        dataframe.to_csv(cache_path)
 
         return dataframe
 
 
     @staticmethod
     def create_fundamental_dataframe(start_date: date, end_date: date, \
-                universe: List[str], file_path: str, strategy):
+                universe: List[str], cache_path: str, strategy):
         
         if not isdir(FUNDAMENTAL_DATAFRAME_FOLDER):
             makedirs(FUNDAMENTAL_DATAFRAME_FOLDER)
@@ -66,7 +66,7 @@ class DataManager:
 
         dataframe = pd.concat(dataframes, axis=0)
         dataframe.sort_index(inplace=True)
-        dataframe.to_csv(file_path)
+        dataframe.to_csv(cache_path)
         return dataframe
 
 
@@ -96,7 +96,7 @@ class DataManager:
                 load_function = DataManager.data_prep(db_type)
                 dataframe = load_function(start_date=start_date,
                             end_date=end_date, universe=universe,
-                            strategy=strategy, file_path=file_path)
+                            strategy=strategy, cache_path=file_path)
                 self.DATAFRAMES[db_type] = dataframe
             else:
                 print('Found existing %s, using cached data' % db_type)

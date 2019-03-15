@@ -4,7 +4,8 @@ from strategies.strategy import Strategy
 class SimplePE(Strategy):
 
     @staticmethod
-    def required_fields():  return {'ff_div_cf', 'ff_mkt_val', 'ff_free_ps_cf'}
+    def required_fields():  return {'ff_roa', 'ff_receiv_tot',
+        'ff_sga', 'ff_asset_turn', 'ff_liabs', 'ff_assets'}
 
 
     def __init__(self, *args, **kwargs):
