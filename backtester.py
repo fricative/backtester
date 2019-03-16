@@ -9,6 +9,9 @@ import pandas as pd
 from data.data_manager import DataManager
 from strategies.strategy import Strategy
 from trade import Trade
+from metrics_util import calculate_information_ratio, \
+        calculate_max_drawdown, calculate_sharpe
+
 
 Trade = NewType('Trade', Trade)
 
@@ -41,7 +44,7 @@ class Backtester:
         self.position = defaultdict(int)
         self.position['cash'] = self.cash
         self.trades = []
-        self.mtm = pd.DataFrame(columns=['date', 'mtm'])
+        self.mtm = pd.Series()
 
 
     def execute_trades(self, trades: List[Trade]):
@@ -59,9 +62,9 @@ class Backtester:
             if quantity != 0:
                 ticker_price = prices[ticker] if ticker != 'cash' else 1
                 mtm += ticker_price * quantity
-        self.mtm = self.mtm.append({'date': self.current_date, 
-                'mtm': round(mtm, 2)}, ignore_index=True)
-        
+        mtm = pd.Series([round(mtm, 2)], index=[self.current_date])
+        self.mtm = pd.concat([self.mtm, mtm])
+       
 
     def post_run(self):
         print('Completed backtest run')
@@ -70,7 +73,10 @@ class Backtester:
             print(str(trade))
             print('=====================')
         print(self.mtm)
-
+        print(calculate_sharpe(time_series=self.mtm, periodicity='1D',
+                               is_return=False))
+        print(calculate_max_drawdown(time_serie=self.mtm,
+                               is_return=False))
 
     def run(self, strategy):
         self.initialize(strategy)

@@ -13,6 +13,4 @@ class SimplePE(Strategy):
 
     
     def digest(self, data, current_date):
-        print('================= ' + str(current_date))
-        print(data['fundamental'].tail())
         return []
