@@ -108,7 +108,10 @@ class DataManager:
         return data
     
 
-    def get_price_for_date(self, as_of_date: date) -> pd.Series:
+    def get_prices_for_date(self, as_of_date: date) -> pd.Series:
         price = self.DATAFRAMES['price']
         return price[price.index <= as_of_date].iloc[-1, :].squeeze()
         
+    
+    def get_ticker_price_for_date(self, ticker: str, as_of_date: date) -> float:
+        return self.DATAFRAMES['price'][ticker].loc[as_of_date]

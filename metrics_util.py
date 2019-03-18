@@ -33,7 +33,8 @@ def calculate_sharpe(time_series, periodicity: str, ticker: str=None,
     
     annualized_return = (1 + time_series.mean()) ** compounding_periods - 1
     standard_deviation = time_series.std() * np.sqrt(compounding_periods)
-    if standard_deviation == 0:     return np.nan
+    if standard_deviation == 0:     
+        return np.nan
         
     return (annualized_return - DEFAULT_RISK_FREE_RATE) / standard_deviation
 

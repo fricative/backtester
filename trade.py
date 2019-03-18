@@ -1,13 +1,12 @@
 
+
 class Trade:
 
-    def __init__(self, ticker, order_type, quantity, price, date=None):
-        self.ticker = ticker
-        self.order_type = order_type,
-        self.quantity = quantity    # use negative value to represent short
+    def __init__(self, price, quantity, trade_date, *args, **kwargs):
         self.price = price
-        self.trade_date = date
+        self.quantity = quantity
+        self.trade_date = trade_date
 
-
+    
     def __str__(self):
-        return ', '.join('%s: %s' % (key, val) for key, val in vars(self).items())
+        return {'%s : %s' % (key, val) for key, val in vars(self).items()}
