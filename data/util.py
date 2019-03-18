@@ -7,8 +7,10 @@ import numpy as np
 import pandas as pd
 import pymysql
 
-from data.config import FUNDAMENTAL_DATAFRAME_BUCKET, PRICE_DATABASE, \
-    PRICE_DATABASE_USERNAME, PRICE_DATABASE_PASSWORD, PRICE_SCHEMA
+from data.config import PRICE_DATABASE, PRICE_DATABASE_USERNAME, \
+    PRICE_DATABASE_PASSWORD, PRICE_SCHEMA, \
+    FUNDAMENTAL_DATABASE, FUNDAMENTAL_DATABASE_USERNAME, \
+    FUNDAMENTAL_DATBASE_PASSWORD, FUNDAMENTAL_SCHEMA
 
 
 def get_data_folder():    
@@ -16,17 +18,10 @@ def get_data_folder():
                             'backtester_database'), 'price'),
                    'fundamental': path.join(path.join(path.expanduser('~'), 
                             'backtester_database'), 'fundamental')}
-    for db_name, data_dir in DATA_FOLDER.items():
+    for _, data_dir in DATA_FOLDER.items():
         if not path.isdir(data_dir):
             makedirs(data_dir)            
     return DATA_FOLDER
-
-
-def load_fundamental_dataframe(fsym_id: str) -> pd.DataFrame:
-    s3 = boto3.client('s3')
-    obj = s3.get_object(Bucket=FUNDAMENTAL_DATAFRAME_BUCKET, Key=fsym_id + '.csv')
-    dataframe = pd.read_csv(io.BytesIO(obj['Body'].read()))
-    return dataframe
 
 
 def load_adjusted_price(fsym_id: str, start_date: datetime.date=None, 
@@ -129,7 +124,70 @@ def _load_split(fsym_id: str, db_connection: pymysql.Connection,
     return dataframe
 
 
+def _get_field_table(fields: [str]) -> dict:
+    """
+    fields: a list of factset fields
+    
+    return a dictionary showing for each field, the list of 
+            tables that contain this field
+    """
 
-if __name__ == '__main__':
-    df = load_adjusted_price('MH33D6-R', start_date=datetime.date(2010, 1, 1), adjustment_method='f')
-    print(df)
+    sql = 'SELECT table_name FROM fundamental.ff_v3_ff_metadata WHERE field_name=%s'
+    result = {}
+    conn = pymysql.connect(host=FUNDAMENTAL_DATABASE, user=FUNDAMENTAL_DATABASE_USERNAME,
+                    password=FUNDAMENTAL_DATBASE_PASSWORD, db=FUNDAMENTAL_SCHEMA)
+    with conn.cursor() as cursor:
+        for field in fields:
+            cursor.execute(sql, field)
+            r = cursor.fetchall()
+            result[field] = [item[0] for item in r]
+    return result
+        
+
+def load_fundamental_dataframe(fsym_ids: [str], period: str, factset_fields: [str]):
+    """
+    fsym_ids: a list of factset security identifiers
+    factset_fields: a list of factset fields to retrieve from factset 
+            SQL database. Fields should only come from tables whose 
+            table name contains '_basic_' or '_advanced_'.
+    period: periodicity of built dataframe, 'a' for annual, 'q' for quarter,
+            'sa' for semi-annual, 'ltm' for last twelve month
+    
+    returns a dictionary of "fsym_id: dataframe" key, value pair.
+    """
+    
+    def table_selector(period: str, tables: [str]) -> str:
+        func = lambda tables, period: [table for table in 
+                    tables if period in table.split('_')]
+        selector = {'q': func(tables, 'qf'), 'sa': func(tables, 'saf'),
+                    'a': func(tables, 'af'), 'ltm': func(tables, 'ltm')}
+        tables = selector[period]
+        return tables[0] if tables else None
+
+    field_tables = _get_field_table(factset_fields)
+    field_table_map = {field: table_selector(period, tables) for 
+                      field, tables in field_tables.items()}
+                      
+    table_field_map, table_dataframe = {}, {}
+    for field, table in field_table_map.items():
+        if table is None:
+            err_msg = 'field %s is not found in tables of periodicity %s' % (field, period)
+            raise ValueError(err_msg)
+        table_field_map[table] = table_field_map.get(table, []) + [field]
+    
+    sql = 'SELECT %s FROM fundamental.%s t WHERE t.fsym_id in (%s)' 
+    sql_fsym_id_str = ','.join(["'" + fsym_id + "'" for fsym_id in fsym_ids])
+    conn = pymysql.connect(host=FUNDAMENTAL_DATABASE, 
+                    user=FUNDAMENTAL_DATABASE_USERNAME, 
+                    password=FUNDAMENTAL_DATBASE_PASSWORD, 
+                    db=FUNDAMENTAL_SCHEMA)
+
+    for table, fields in table_field_map.items():
+        fields = list(set(['fsym_id', 'date'] + fields))
+        fields_str = ','.join(fields)
+        query = sql % (fields_str, 'ff_v3_' + table, sql_fsym_id_str)
+        table_dataframe[table] = pd.read_sql(query, con=conn, 
+                parse_dates=True, index_col=['date', 'fsym_id'])
+    
+    merged_dataframe = pd.concat(table_dataframe.values(), axis=1, join='outer')
+    return merged_dataframe.sort_index()
