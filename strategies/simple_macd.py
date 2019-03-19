@@ -7,9 +7,6 @@ from strategies.strategy import Strategy
 
 class SimpleMACD(Strategy):
 
-    @staticmethod
-    def required_fields():   return {}
-
 
     def __init__(self, data_window_size: int=365, 
                 rebalance_freq: str=None, *args, **kwargs):
@@ -31,7 +28,7 @@ class SimpleMACD(Strategy):
         cross = (diff.iloc[0, :] * diff.iloc[1, :]) < 0
         crossed_tickers = cross[cross]
         for ticker in crossed_tickers.index:
-            if diff[ticker].iloc[-1]:       # buy signal
+            if diff[ticker].iloc[-1] > 0:       # buy signal
                 trades[ticker] += 1000
             else:                           # sell signal
                 trades[ticker] -= 1000

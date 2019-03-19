@@ -12,7 +12,7 @@ if __name__ == '__main__':
                 'MH33D6-R',
                 'P8R3C2-R']
     
-    start_date = date(2010, 1, 1)
+    start_date = date(2017, 1, 1)
     bt = Backtester(universe=universe[:100], start_date=start_date)
     strategy = SimpleMACD()
     bt.run(strategy)

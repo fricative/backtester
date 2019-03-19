@@ -1,8 +1,8 @@
-
+from datetime import date
 
 class Trade:
 
-    def __init__(self, price, quantity, trade_date, *args, **kwargs):
+    def __init__(self, price: float, quantity: int, trade_date: date, *args, **kwargs):
         self.price = price
         self.quantity = quantity
         self.trade_date = trade_date

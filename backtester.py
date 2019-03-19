@@ -2,6 +2,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 from hashlib import sha256
 import logging
+import time
 from typing import List, NewType
 
 import pandas as pd
@@ -10,6 +11,7 @@ from data.data_manager import DataManager
 from strategies.strategy import Strategy
 from order import Order
 from trade import Trade
+from util import get_logger
 from metrics_util import calculate_information_ratio, \
         calculate_max_drawdown, calculate_sharpe
 
@@ -20,8 +22,8 @@ Trade = NewType('Trade', Trade)
 
 class Backtester:
 
-    def __init__(self, universe: List[str], start_date: date, 
-            end_date: date=None, initial_cash: float=1000000.0, *args, **kwargs):
+    def __init__(self, universe: List[str], start_date: date, end_date: date=None, 
+            initial_cash: float=1000000.0, logger=None, *args, **kwargs):
         self.universe = sorted(universe)
         self.initial_cash = initial_cash
         self.start_date = start_date
@@ -31,6 +33,7 @@ class Backtester:
         self.position = defaultdict(int)
         self.orders = {}
         self.trades = []
+        self.logger = logger or get_logger('Backtester engine', logging.INFO)
 
 
     def initialize(self, strategy):
@@ -55,8 +58,8 @@ class Backtester:
         for order in self.orders['pending']:
 
             if order.order_type == 'mkt':
-                price = self.data_manager.get_ticker_price_for_date(ticker=order.ticker, 
-                                as_of_date=self.current_date)
+                price = self.data_manager.get_ticker_price_for_date(
+                        ticker=order.ticker, as_of_date=self.current_date)
                 trade = order.fill(price=price, trade_date=self.current_date)
                 self.trades.append(trade)
                 self.orders['filled'].append(order)
@@ -74,41 +77,45 @@ class Backtester:
         prices = self.data_manager.get_prices_for_date(self.current_date)
         for ticker, quantity in self.position.items():
             mtm  += prices[ticker] * quantity if quantity else 0
-        mtm = pd.Series([round(mtm, 2)], index=[self.current_date])
+        mtm = pd.Series([round(mtm, 4)], index=[self.current_date])
         self.mtm = pd.concat([self.mtm, mtm])
        
 
     def post_run(self):
-        self.max_drawdown = calculate_max_drawdown(time_serie=self.mtm,
-                               is_return=False)
+        self.max_drawdown = calculate_max_drawdown(
+                time_serie=self.mtm, is_return=False)
         self.sharpe = calculate_sharpe(time_series=self.mtm, 
-                            periodicity='1D', is_return=False)
-        print('Completed backtest run')
-        for param, value in vars(self).items():
-            print('%s: %s' % (param, str(value)))
+                periodicity='1D', is_return=False)
+        self.logger.info('Completed backtest run')
+        self.run_duration = time.time() - self.run_start_time
+        #for param, value in vars(self).items():
+        #    print('%s: %s' % (param, str(value)))
         self.mtm.plot()
 
 
     def run(self, strategy):
+        
+        self.run_start_time = time.time()
+        self.logger.info('Start backtest run')
         self.initialize(strategy)
+
+        if bool(len(pd.bdate_range(self.current_date, self.current_date))):
+            self.current_date += pd.offsets.BDay()
+
         while self.current_date.date() <= self.end_date:
-            
-            if self.current_date.isoweekday() in (6, 7):
-                increment = 1 if self.current_date.isoweekday() == 7 else 2
-                self.current_date += timedelta(days=increment)
-                continue
 
             data = self.data_manager.get_market_data(as_of_date=self.current_date)
             # fill any pending orders before passing data into strategy for digestion
             self.execute_trades()
             self.post_trade()
 
-            orders = strategy.digest(data=data, current_date=self.current_date,
-                            position=self.position)
-            self.orders['pending'].extend(orders)
+            new_orders = strategy.digest(data=data, 
+                current_date=self.current_date, position=self.position)
+            self.orders['pending'].extend(new_orders)
 
             # TODO: optimize based on strategy rebalancing frequency
             
-            self.current_date += timedelta(days=1)
+            self.logger.info('run strategy for %s', self.current_date.date())
+            self.current_date += pd.offsets.BDay()
 
         self.post_run()

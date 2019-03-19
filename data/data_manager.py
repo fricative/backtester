@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 from dateutil.parser import parse
 from hashlib import sha256
+import logging
 from os.path import join, isfile, isdir
 from os import makedirs
 from sys import stdout
@@ -10,12 +11,12 @@ import pandas as pd
 
 from data.util import get_data_folder, load_adjusted_price, load_fundamental_dataframe
 from data.config import FUNDAMENTAL_PUBLISH_DELAY
+from util import get_logger
 
 
 class DataManager:
-  
-    @staticmethod
-    def create_price_dataframe(start_date: date, end_date: date, \
+
+    def create_price_dataframe(self, start_date: date, end_date: date, \
                 universe: List[str], strategy):
 
         run_id = ' '.join([start_date.isoformat(), end_date.isoformat(), 
@@ -24,7 +25,7 @@ class DataManager:
         file_path = join(get_data_folder()['price'], file_key + '.csv')
         
         if isfile(file_path):
-            print('found existing cached price data')
+            self.logger.info('found existing cached price data')
             return pd.read_csv(file_path, index_col='date', parse_dates=['date'])
 
         dataframe = None
@@ -40,7 +41,6 @@ class DataManager:
                 continue
             dataframe = dataframe.join(df, how='outer')
         
-        print()
         dataframe = dataframe.round(decimals=2)
         dataframe.index = pd.to_datetime(dataframe.index)
         dataframe.sort_index(inplace=True)
@@ -49,50 +49,46 @@ class DataManager:
         return dataframe
 
 
-    @staticmethod
-    def create_fundamental_dataframe(start_date: date, end_date: date, \
+    def create_fundamental_dataframe(self, start_date: date, end_date: date, \
                 universe: List[str], strategy):
         
-        required_fields = list(strategy.required_fields())
+        required_fields = sorted(list(strategy.required_fields()))
         # return empty dataframe if this is a pure price based strategy
         if len(required_fields) == 0:
             return  pd.DataFrame()      
 
         run_id = ' '.join([start_date.isoformat(), end_date.isoformat(), 
-                ''.join(universe), ','.join(sorted(required_fields))])
+                  ''.join(universe), ','.join(sorted(required_fields))])
         file_key = sha256(run_id.encode()).hexdigest()
         file_path = join(get_data_folder()['fundamental'], file_key + '.csv')
 
         if isfile(file_path):
-            print('found existing cached fundamental data')
+            self.logger.info('found existing cached fundamental data')
             return pd.read_csv(file_path, parse_dates=True, 
                     index_col=['date', 'fsym_id'])
 
         dataframe = load_fundamental_dataframe(fsym_ids=universe, 
-                period='q', factset_fields=required_fields)
+                    period='q', factset_fields=required_fields)
         dataframe.to_csv(file_path)
         return dataframe
 
 
-    @staticmethod
-    def data_prep(db_type):
-        prep_function = {'fundamental': DataManager.create_fundamental_dataframe,
-                         'price': DataManager.create_price_dataframe}
-        return prep_function[db_type]
-
-
-    def __init__(self, *args, **kwargs):
+    def __init__(self, logger=None, *args, **kwargs):
         self.DATAFRAMES = {}
         self.current_row_index = None
-
+        self.logger = logger or get_logger('DataManager', logging.WARNING)
+    
 
     def setup(self, start_date: date, end_date: date, 
             universe: List[str], strategy) -> None:
-        for db_type, _ in get_data_folder().items():
-            load_function = DataManager.data_prep(db_type)
-            self.DATAFRAMES[db_type] = load_function(start_date=start_date,
-                    end_date=end_date, universe=universe, strategy=strategy)
         
+        self.DATAFRAMES['price'] = self.create_price_dataframe(
+            start_date=start_date, end_date=end_date, 
+            universe=universe, strategy=strategy)
+        self.DATAFRAMES['fundamental'] = self.create_fundamental_dataframe(
+            start_date=start_date, end_date=end_date, 
+            universe=universe, strategy=strategy)
+       
 
     def get_market_data(self, as_of_date: date) -> Dict:
         data = {}

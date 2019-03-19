@@ -6,8 +6,8 @@ from trade import Trade
 
 class Order:
 
-    def __init__(self, ticker, quantity, order_date, 
-                order_type='mkt', price=None):
+    def __init__(self, ticker: str, quantity: int, order_date: date, 
+                order_type='mkt', price: float=None):
         """
         order_type: accepts one of ['lmt', 'mkt'] order type
         price: when order_type is 'mkt', price is ignored
