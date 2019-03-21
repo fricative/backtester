@@ -7,14 +7,14 @@ from typing import List, Dict, NewType
 
 import pandas as pd
 
-from data.data_manager import DataManager
-from strategies.strategy import Strategy
 from core.order import Order
 from core.trade import Trade
 from core.util import get_logger
 from core.metrics_util import calculate_information_ratio, \
         calculate_max_drawdown, calculate_sharpe
 
+from data.data_manager import DataManager
+from strategies.strategy import Strategy
 
 Order = NewType('Order', Order)
 Trade = NewType('Trade', Trade)
@@ -33,7 +33,7 @@ class Engine:
         self.position = defaultdict(int)
         self.orders = {}
         self.trades = []
-        self.logger = logger or get_logger('Backtester engine', logging.INFO)
+        self.logger = logger or get_logger('backtester engine', logging.INFO)
 
 
     def initialize(self, strategy, data: Dict[str, pd.DataFrame]=None):
@@ -59,7 +59,6 @@ class Engine:
     def execute_trades(self):
         unfilled_order = []
         for order in self.orders['pending']:
-
             if order.order_type == 'mkt':
                 price = self.data_manager.get_ticker_price_for_date(
                         ticker=order.ticker, as_of_date=self.current_date)
@@ -68,10 +67,8 @@ class Engine:
                 self.orders['filled'].append(order)
                 self.position[order.ticker] += order.quantity
                 self.cash -= trade.price * trade.quantity
-
             elif order.order_type == 'lmt':
-                raise NotImplementedError('Limit order is NOT implemented yet')
-            
+                raise NotImplementedError('limit order is NOT implemented yet')
         self.orders['pending'] = unfilled_order
 
 
@@ -89,7 +86,7 @@ class Engine:
                 time_serie=self.mtm, is_return=False)
         self.sharpe = calculate_sharpe(time_series=self.mtm, 
                 periodicity='1D', is_return=False)
-        self.logger.info('Completed backtest run')
+        self.logger.info('completed backtest run')
         self.run_duration = time.time() - self.run_start_time
         #for param, value in vars(self).items():
         #    print('%s: %s' % (param, str(value)))
@@ -107,7 +104,7 @@ class Engine:
         """
         
         self.run_start_time = time.time()
-        self.logger.info('Start backtest run')
+        self.logger.info('start backtest run')
         self.initialize(strategy, data)
 
         if bool(len(pd.bdate_range(self.current_date, self.current_date))):

@@ -16,4 +16,4 @@ class Strategy:
 
 
     def digest(self, data: Dict, current_date: date, position: Dict) -> List[Order]:
-        raise NotImplementedError('Digest method is NOT implemented')
+        raise NotImplementedError('This is an interface class. Digest method is NOT implemented')
