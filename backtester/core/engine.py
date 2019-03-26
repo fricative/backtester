@@ -7,6 +7,7 @@ from typing import List, Dict, NewType
 
 import pandas as pd
 
+from core.calendar import Calendar
 from core.order import Order
 from core.trade import Trade
 from core.util import get_logger
@@ -22,8 +23,10 @@ Trade = NewType('Trade', Trade)
 
 class Engine:
 
-    def __init__(self, universe: List[str], start_date: date, end_date: date=None, 
-            initial_cash: float=1000000.0, logger=None, *args, **kwargs):
+    def __init__(self, universe: List[str], start_date: date, 
+        end_date: date=None, initial_cash: float=1000000.0, 
+        calendar=None, logger=None, *args, **kwargs):
+
         self.universe = sorted(universe)
         self.initial_cash = initial_cash
         self.start_date = start_date
@@ -33,6 +36,7 @@ class Engine:
         self.position = defaultdict(int)
         self.orders = {}
         self.trades = []
+        self.calendar = calendar
         self.logger = logger or get_logger('backtester engine', logging.INFO)
 
 
@@ -47,8 +51,14 @@ class Engine:
                     end_date=self.end_date, universe=self.universe)
         else:
             self.data_manager.DATAFRAMES = data
+
+        if self.calendar is None:
+            self.calendar = Calendar(self.data_manager.DATAFRAMES['price'].index)
         
         self.current_date = pd.Timestamp(self.start_date)
+        while not self.calendar.is_business_date(self.current_date):
+            self.current_date += pd.offsets.BDay()
+            
         self.position = defaultdict(int)
         self.cash = self.initial_cash
         self.trades = []
@@ -107,16 +117,13 @@ class Engine:
         self.logger.info('start backtest run')
         self.initialize(strategy, data)
 
-        if bool(len(pd.bdate_range(self.current_date, self.current_date))):
-            self.current_date += pd.offsets.BDay()
+        while self.current_date.date() < self.end_date:
 
-        while self.current_date.date() <= self.end_date:
-
-            data = self.data_manager.get_market_data(as_of_date=self.current_date)
             # fill any pending orders before passing data into strategy for digestion
             self.execute_trades()
             self.post_trade()
 
+            data = self.data_manager.get_market_data(as_of_date=self.current_date)
             new_orders = strategy.digest(data=data, 
                 current_date=self.current_date, position=self.position)
             self.orders['pending'].extend(new_orders)
@@ -124,6 +131,6 @@ class Engine:
             # TODO: optimize based on strategy rebalancing frequency
             
             #self.logger.info('run strategy for %s', self.current_date.date())
-            self.current_date += pd.offsets.BDay()
+            self.current_date = self.calendar.next_business_date(self.current_date)
 
         self.post_run()
