@@ -11,7 +11,7 @@ class SampleStrategy(Strategy):
         super().__init__(*args, **kwargs)
         
 
-    def digest(self, data, current_date, position) -> List[Order]:
+    def digest(self, data, current_date, position, cash) -> List[Order]:
         trades = []
         price_dataframe = data['price']
         aapl = price_dataframe['MH33D6-R']

@@ -29,7 +29,8 @@ class Order:
         self.trade_date = trade_date
         self.price = price
         self.status = 'filled'
-        return Trade(price=self.price, quantity=self.quantity, trade_date=trade_date)
+        return Trade(price=self.price, quantity=self.quantity, 
+                    ticker=self.ticker, trade_date=trade_date)
 
 
     def cancel(self) -> None:

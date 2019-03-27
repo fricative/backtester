@@ -13,5 +13,5 @@ class SimplePE(Strategy):
         super().__init__(*args, **kwargs)
 
     
-    def digest(self, data, current_date, position):
+    def digest(self, data, current_date, position, cash):
         return []

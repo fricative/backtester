@@ -124,7 +124,7 @@ class Engine:
             self.post_trade()
 
             data = self.data_manager.get_market_data(as_of_date=self.current_date)
-            new_orders = strategy.digest(data=data, 
+            new_orders = strategy.digest(data=data, cash=self.cash,
                 current_date=self.current_date, position=self.position)
             self.orders['pending'].extend(new_orders)
 

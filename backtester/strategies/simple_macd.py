@@ -14,7 +14,7 @@ class SimpleMACD(Strategy):
         self.rebalance_freq = rebalance_freq
         
 
-    def digest(self, data: Dict, current_date: date, position: Dict) -> List[Order]:
+    def digest(self, data: Dict, current_date: date, position: Dict, cash:float=None) -> List[Order]:
         price = data['price']
         trades = defaultdict(int)
         for ticker, qty in position.items():
