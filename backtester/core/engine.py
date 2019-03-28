@@ -9,6 +9,7 @@ import pandas as pd
 
 from core.calendar import Calendar
 from core.order import Order
+from core.report import Report
 from core.trade import Trade
 from core.util import get_logger
 from core.metrics_util import calculate_information_ratio, \
@@ -98,9 +99,7 @@ class Engine:
                 periodicity='1D', is_return=False)
         self.logger.info('completed backtest run')
         self.run_duration = time.time() - self.run_start_time
-        #for param, value in vars(self).items():
-        #    print('%s: %s' % (param, str(value)))
-        self.mtm.plot()
+        Report().generate_report(self)
 
 
     def run(self, strategy, data: Dict[str, pd.DataFrame]=None):
