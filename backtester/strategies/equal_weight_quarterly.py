@@ -21,7 +21,7 @@ class EqualWeightQuarterly(Strategy):
                 portfolio_value += sum(shares * data['price'][ticker].iloc[-1] 
                                     for ticker, shares in position.items())
             target_position_value = portfolio_value / len(data['price'].columns)
-            print('cash %s, portfolio value %s, target position value %s' % (cash, portfolio_value, target_position_value))
+            print('date %s, cash %s, portfolio value %s, target position value %s' % (current_date, cash, portfolio_value, target_position_value))
             for ticker in data['price'].columns:
                 target_shares = target_position_value / data['price'][ticker].iloc[-1]
                 new_order = Order(ticker=ticker, quantity=target_shares - position.get(ticker, 0), 

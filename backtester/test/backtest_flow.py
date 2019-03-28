@@ -10,7 +10,7 @@ from strategies.strategy import Strategy
 
 class TestStrategy(Strategy):
     
-    def digest(self, data, current_date, position):
+    def digest(self, data, cash, current_date, position):
         orders = []
         price = data['price']
         lastest_price = price.iloc[-1, :]
