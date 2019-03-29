@@ -92,11 +92,26 @@ class Engine:
         self.mtm = pd.concat([self.mtm, mtm])
        
 
-    def post_run(self):
+    def post_run(self, strategy):
         self.max_drawdown = calculate_max_drawdown(
                 time_serie=self.mtm, is_return=False)
         self.sharpe = calculate_sharpe(time_series=self.mtm, 
                 periodicity='1D', is_return=False)
+
+        if strategy.benchmark is None:
+            self.information_ratio = 'N/A'
+            self.total_return_trend = self.mtm / self.mtm[0] * 100
+        else:
+            benchmark = self.data_manager.DATAFRAMES['benchmark']
+            benchmark['portfolio value'] = self.mtm
+            self.mtm = benchmark.loc[self.start_date: self.end_date, :]
+            self.information_ratio = calculate_information_ratio(
+                time_series=self.mtm, periodicity='1D', 
+                ticker='portfolio value', benchmark= strategy.benchmark)
+
+            # normalize mtm time serie to start with base 100
+            self.total_return_trend = self.mtm / self.mtm.iloc[0, :] * 100
+
         self.logger.info('completed backtest run')
         self.run_duration = time.time() - self.run_start_time
         Report().generate_report(self)
@@ -132,4 +147,4 @@ class Engine:
             #self.logger.info('run strategy for %s', self.current_date.date())
             self.current_date = self.calendar.next_business_date(self.current_date)
 
-        self.post_run()
+        self.post_run(strategy)

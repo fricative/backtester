@@ -8,11 +8,9 @@ from strategies.strategy import Strategy
 class SimpleMACD(Strategy):
 
 
-    def __init__(self, data_window_size: int=365, 
-                rebalance_freq: str=None, *args, **kwargs):
-        self.data_window_size = data_window_size
-        self.rebalance_freq = rebalance_freq
-        
+    def __init__(self,*args, **kwargs):
+        super().__init__(*args, **kwargs)
+
 
     def digest(self, data: Dict, current_date: date, position: Dict, cash:float=None) -> List[Order]:
         price = data['price']

@@ -45,7 +45,7 @@ class Report:
                 report = self.print_row(report, field, value)
         
         report = self.print_list(report, backtest_engine.trades, 'Trades')
-        report = self.generate_plot(report, backtest_engine.mtm, 'MTM')
+        report = self.generate_plot(report, backtest_engine.total_return_trend, 'Total Return Chart')
         folder_path = self.generate_report_dir()
         file_name = str(datetime.now()) + '.pdf'
         full_file_name = os.path.join(folder_path, file_name)

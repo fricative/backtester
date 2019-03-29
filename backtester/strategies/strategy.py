@@ -6,11 +6,12 @@ from core.order import Order
 class Strategy:
 
     @staticmethod
-    def required_fields():   return {}
+    def required_fields():   return []
 
 
-    def __init__(self, data_window_size: int=365, 
+    def __init__(self, data_window_size: int=365, benchmark: str=None,
                 rebalance_freq: str=None, *args, **kwargs):
+        self.benchmark = benchmark
         self.data_window_size = data_window_size
         self.rebalance_freq = rebalance_freq
 

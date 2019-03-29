@@ -6,7 +6,7 @@ from core.order import Order
 class SimplePE(Strategy):
 
     @staticmethod
-    def required_fields():  return {'ff_pe'}
+    def required_fields():  return ['ff_pe']
 
 
     def __init__(self, *args, **kwargs):

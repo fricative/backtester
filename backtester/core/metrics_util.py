@@ -40,6 +40,11 @@ def calculate_sharpe(time_series, periodicity: str, ticker: str=None,
 
 
 def calculate_max_drawdown(time_serie: pd.Series, is_return: bool=False) -> float:
+    """
+    time_series: pd.Serie or pd.DataFrame containing the 
+                 time serie to calculate max drawdown for
+    is_return: whether the passed in time_series is already return
+    """
 
     if is_return:
         time_serie = pd.concat([pd.Series([0]), time_serie]) + 1
@@ -52,16 +57,26 @@ def calculate_max_drawdown(time_serie: pd.Series, is_return: bool=False) -> floa
 
 def calculate_information_ratio(time_series: pd.DataFrame, periodicity: str, 
         ticker: str, benchmark: str, is_return: bool=False) -> float:
+    """
+    time_series: pd.DataFrame containing the time serie to calculate IC for
+    periodicity: the periodicity of the passed in time_serie, 
+                 format is e.g. "1D", "1W", "2W", "1M", "1Q", "1Y"
+         ticker: if passed in time_series is dataframe, ticker is 
+                 the name of the column to calculate sharpe for
+      benchmark: column name for benchmark ticker
+      is_return: whether the passed in time_series is already return
+    """
     
     if not is_return:
         time_series = np.log((time_series / time_series.shift(1)).iloc[1:, :])
     
     period_unit = periodicity[-1].upper()
-    periods = int(period_unit[:-1])
+    periods = int(periodicity[:-1])
     compounding_periods = ANNUALIZATION_FACTOR[period_unit] / periods
 
     active_return = time_series[ticker] - time_series[benchmark]
     return_std = active_return.std()
-    annualized_excess_return = (1 + active_return) ** compounding_periods - 1
+    mean_active_return = active_return.mean()
+    annualized_excess_return = (1 + mean_active_return) ** compounding_periods - 1
     annualized_excess_risk = return_std * np.sqrt(compounding_periods)
     return annualized_excess_return / annualized_excess_risk

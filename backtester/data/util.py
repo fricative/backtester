@@ -13,15 +13,36 @@ from data.config import PRICE_DATABASE, PRICE_DATABASE_USERNAME, \
     FUNDAMENTAL_DATBASE_PASSWORD, FUNDAMENTAL_SCHEMA
 
 
-def get_data_folder():    
-    DATA_FOLDER = {'price': path.join(path.join(path.expanduser('~'), 
-                            'backtester_database'), 'price'),
-                   'fundamental': path.join(path.join(path.expanduser('~'), 
-                            'backtester_database'), 'fundamental')}
-    for _, data_dir in DATA_FOLDER.items():
+def get_data_folder():
+    BASE_PATH = path.join(path.expanduser('~'), 'backtester_database')
+    DATA_FOLDER = {
+                    'price': path.join(BASE_PATH, 'price'),
+                    'fundamental': path.join(BASE_PATH, 'fundamental'),
+                    'benchmark': path.join(BASE_PATH, 'benchmark')
+                  }
+    for data_dir in DATA_FOLDER.values():
         if not path.isdir(data_dir):
             makedirs(data_dir)            
     return DATA_FOLDER
+
+
+def load_benchmark(benchmark: str) -> pd.DataFrame:
+    """
+    benchmark: str of the index name. Make sure there is a csv file 
+    with the name as the passed in benchmark existing in benchmark folder
+    """
+    benchmark_folder = get_data_folder()['benchmark']
+    file_path = path.join(benchmark_folder, benchmark + '.csv')
+    if not path.isfile(file_path):
+        raise FileNotFoundError('%s.csv is not found at %s' % 
+                (benchmark, benchmark_folder))
+    benchmark_series = pd.read_csv(file_path, index_col=0, parse_dates=True)
+    if benchmark_series.shape[1] > 1:
+        if benchmark in benchmark_series.columns:
+            benchmark_series = benchmark_series.loc[:, [benchmark]]
+    else:
+        benchmark_series.columns = [benchmark]
+    return benchmark_series
 
 
 def load_adjusted_price(fsym_id: str, start_date: datetime.date=None, 
