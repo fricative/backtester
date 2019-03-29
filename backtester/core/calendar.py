@@ -31,3 +31,9 @@ class Calendar:
 
     def is_quarter_end_business_date(self, date):
         return self.next_business_date(date).month != date.month and date.month in (3, 6, 9, 12)
+
+    def is_semiannual_end_business_date(self, date):
+        return self.next_business_date(date).month != date.month and date.month == 6
+
+    def is_year_end_business_date(self, date):
+        return self.next_business_date(date).year > date.year

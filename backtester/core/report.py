@@ -4,6 +4,7 @@ from datetime import date, datetime
 from fpdf import FPDF
 import matplotlib.pyplot as plt
 import numpy as np
+from pandas.plotting import register_matplotlib_converters
 import pandas as pd
 
 
@@ -11,7 +12,7 @@ class Report:
 
     @staticmethod
     def printable_types():
-        return {int, float, str, np.float, date, datetime, pd.Timestamp}
+        return {int, float, str, np.float64, date, datetime, pd.Timestamp}
 
     def __init__(self):
         self.row_width = 20
@@ -31,6 +32,10 @@ class Report:
     
 
     def generate_report(self, backtest_engine):
+        """
+        backtest_engine: core.engine.Engine object
+        saves the PDF backtest report into report folder
+        """
         report = FPDF()
         report.add_page()
         report.set_font(self.font_family, size=self.font_size)
@@ -49,6 +54,7 @@ class Report:
 
     def generate_plot(self, report, dataframe, plot_title):
         report.cell(self.row_width, self.row_height, txt=plot_title, ln=1)
+        register_matplotlib_converters()
         plt.plot(dataframe)
         folder_path = self.generate_report_dir()
         pic_path = os.path.join(folder_path, 'chart.png')

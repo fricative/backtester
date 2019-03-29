@@ -11,5 +11,5 @@ if __name__ == '__main__':
     start_date = date(2011, 1, 12)
     end_date = date(2018, 12, 31)
     bt = Engine(universe=random_four_stocks, start_date=start_date, end_date=end_date)
-    strategy = EqualWeightQuarterly()
+    strategy = PriceWeightQuarterly()
     bt.run(strategy)
