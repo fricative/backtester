@@ -55,7 +55,7 @@ class Report:
     def generate_plot(self, report, dataframe, plot_title):
         report.cell(self.row_width, self.row_height, txt=plot_title, ln=1)
         register_matplotlib_converters()
-        plt.plot(dataframe)
+        dataframe.plot()
         folder_path = self.generate_report_dir()
         pic_path = os.path.join(folder_path, 'chart.png')
         plt.savefig(pic_path)
